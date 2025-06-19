@@ -101,3 +101,7 @@ def update_scattergraph(site_dropdown,payload_slider):
             size='Payload Mass (kg)',
             hover_data=['Payload Mass (kg)'])
     return fig
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 8050))
+    app.run_server(host="0.0.0.0", port=port, debug=True)
