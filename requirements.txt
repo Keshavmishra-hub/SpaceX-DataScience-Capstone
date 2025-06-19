@@ -3,5 +3,6 @@ numpy
 Flask
 Dash
 gunicorn
+setuptools
 dash_html_components
 dash_core_components
