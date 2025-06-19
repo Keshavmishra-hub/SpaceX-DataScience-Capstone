@@ -1,28 +1,25 @@
-# app.py
-
 import pandas as pd
 import dash
 from dash import html, dcc
 from dash.dependencies import Input, Output
 import plotly.express as px
 
-# Load SpaceX data
+# Load the CSV
 spacex_df = pd.read_csv("spacex_launch_dash.csv")
 max_payload = spacex_df['Payload Mass (kg)'].max()
 min_payload = spacex_df['Payload Mass (kg)'].min()
 
-# Launch sites list
+# Dropdown options
 launch_sites = [{'label': 'All Sites', 'value': 'All Sites'}] + \
                [{'label': site, 'value': site} for site in spacex_df['Launch Site'].unique()]
 
-# Dash app
+# Dash app setup
 app = dash.Dash(__name__)
 server = app.server
 
-# Layout
+# App layout
 app.layout = html.Div([
-    html.H1('SpaceX Launch Records Dashboard',
-            style={'textAlign': 'center', 'color': '#503D36', 'fontSize': 40}),
+    html.H1('SpaceX Launch Records Dashboard', style={'textAlign': 'center', 'color': '#503D36', 'fontSize': 40}),
 
     dcc.Dropdown(
         id='site_dropdown',
@@ -37,10 +34,11 @@ app.layout = html.Div([
     html.Br(),
 
     html.P("Payload range (Kg):"),
-
     dcc.RangeSlider(
         id='payload_slider',
-        min=0, max=10000, step=1000,
+        min=0,
+        max=10000,
+        step=1000,
         value=[min_payload, max_payload],
         marks={i: f'{i} kg' for i in range(0, 10001, 1000)}
     ),
@@ -49,16 +47,15 @@ app.layout = html.Div([
     dcc.Graph(id='success-payload-scatter-chart')
 ])
 
-# Pie chart callback
+# Pie Chart Callback
 @app.callback(
     Output('success-pie-chart', 'figure'),
     Input('site_dropdown', 'value')
 )
-def update_pie(selected_site):
+def update_pie_chart(selected_site):
     if selected_site == 'All Sites':
-        filtered_df = spacex_df[spacex_df['class'] == 1]
         fig = px.pie(
-            filtered_df,
+            spacex_df[spacex_df['class'] == 1],
             names='Launch Site',
             title='Total Successful Launches by Site',
             hole=0.3
@@ -77,26 +74,30 @@ def update_pie(selected_site):
         )
     return fig
 
-# Scatter plot callback
+# Scatter Plot Callback
 @app.callback(
     Output('success-payload-scatter-chart', 'figure'),
     [Input('site_dropdown', 'value'),
      Input('payload_slider', 'value')]
 )
-def update_scatter(selected_site, payload_range):
+def update_scatter_chart(selected_site, payload_range):
     low, high = payload_range
-    df = spacex_df[
-        (spacex_df['Payload Mass (kg)'] >= low) &
-        (spacex_df['Payload Mass (kg)'] <= high)
-    ]
+    filtered_df = spacex_df[(spacex_df['Payload Mass (kg)'] >= low) &
+                             (spacex_df['Payload Mass (kg)'] <= high)]
     if selected_site != 'All Sites':
-        df = df[df['Launch Site'] == selected_site]
+        filtered_df = filtered_df[filtered_df['Launch Site'] == selected_site]
 
     fig = px.scatter(
-        df, x='Payload Mass (kg)', y='class',
+        filtered_df,
+        x='Payload Mass (kg)',
+        y='class',
         color='Booster Version',
         size='Payload Mass (kg)',
         hover_data=['Payload Mass (kg)'],
-        title='Payload vs Success Correlation'
+        title='Payload vs Outcome by Booster Version'
     )
     return fig
+
+# Run app
+if __name__ == '__main__':
+    app.run_server(debug=True)
