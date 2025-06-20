@@ -1,34 +1,43 @@
 # Import required libraries
 import pandas as pd
 import dash
-from dash import html
-from dash import dcc
+from dash import html, dcc
 from dash.dependencies import Input, Output
 import plotly.express as px
-import os
 import plotly.graph_objects as go
+import os
 
-# Read the airline data into pandas dataframe
+# Read the data into pandas dataframe
 csv_path = os.path.join(os.path.dirname(__file__), "spacex_launch_dash.csv")
-spacex_df = pd.read_csv(csv_path)
+try:
+    spacex_df = pd.read_csv(csv_path)
+except FileNotFoundError:
+    print("Error: spacex_launch_dash.csv not found. Ensure the file is in the same directory.")
+    raise
+
+# Validate required columns
+required_columns = ['Launch Site', 'class', 'Payload Mass (kg)', 'Booster Version']
+if not all(col in spacex_df.columns for col in required_columns):
+    print(f"Error: CSV missing required columns. Found: {spacex_df.columns.tolist()}")
+    raise ValueError("Missing required columns in CSV")
+
+# Calculate payload range for slider
 max_payload = spacex_df['Payload Mass (kg)'].max()
 min_payload = spacex_df['Payload Mass (kg)'].min()
-
-# Clamp payload values to slider range
-min_payload = max(0, min(min_payload, 10000))
+min_payload = max(0, min(min_payload, 10000))  # Clamp to slider range
 max_payload = min(10000, max_payload)
 
 # Create a dash application
 app = dash.Dash(__name__)
 server = app.server
 
+# Create dropdown options for launch sites
 uniquelaunchsites = spacex_df['Launch Site'].unique().tolist()
-lsites = []
-lsites.append({'label': 'All Sites', 'value': 'All Sites'})
-for site in uniquelaunchsites:
-    lsites.append({'label': site, 'value': site})
+lsites = [{'label': 'All Sites', 'value': 'All Sites'}] + [
+    {'label': site, 'value': site} for site in uniquelaunchsites
+]
 
-# Create an app layout
+# Create app layout
 app.layout = html.Div(children=[
     html.H1('SpaceX Launch Records Dashboard',
             style={'textAlign': 'center', 'color': '#503D36', 'font-size': 40}),
@@ -43,27 +52,16 @@ app.layout = html.Div(children=[
         min=0,
         max=10000,
         step=1000,
-        marks={
-            0: '0 kg',
-            1000: '1000 kg',
-            2000: '2000 kg',
-            3000: '3000 kg',
-            4000: '4000 kg',
-            5000: '5000 kg',
-            6000: '6000 kg',
-            7000: '7000 kg',
-            8000: '8000 kg',
-            9000: '9000 kg',
-            10000: '10000 kg'
-        },
+        marks={i: f'{i} kg' for i in range(0, 11000, 1000)},
         value=[min_payload, max_payload]
     ),
     html.Div(dcc.Graph(id='success-payload-scatter-chart', style={'height': '500px'})),
 ])
 
+# Callback for pie chart
 @app.callback(
-    Output(component_id='success-pie-chart', component_property='figure'),
-    [Input(component_id='site_dropdown', component_property='value')]
+    Output('success-pie-chart', 'figure'),
+    [Input('site_dropdown', 'value')]
 )
 def update_graph(site_dropdown):
     if site_dropdown == 'All Sites':
@@ -72,33 +70,31 @@ def update_graph(site_dropdown):
             fig = go.Figure()
             fig.add_annotation(text="No successful launches for All Sites",
                                xref="paper", yref="paper", showarrow=False, font=dict(size=20))
-            fig.update_layout(title="Total Success Launches By all sites", height=400)
+            fig.update_layout(title="Total Success Launches By All Sites", height=400)
             return fig
-        fig = px.pie(df, names='Launch Site', hole=.3, title='Total Success Launches By all sites')
+        fig = px.pie(df, names='Launch Site', hole=.3, title='Total Success Launches By All Sites')
     else:
-        df = spacex_df.loc[spacex_df['Launch Site'] == site_dropdown]
+        df = spacex_df[spacex_df['Launch Site'] == site_dropdown]
         if df.empty:
             fig = go.Figure()
             fig.add_annotation(text=f"No data for {site_dropdown}",
                                xref="paper", yref="paper", showarrow=False, font=dict(size=20))
-            fig.update_layout(title=f"Total Success Launches for site {site_dropdown}", height=400)
+            fig.update_layout(title=f"Total Success Launches for {site_dropdown}", height=400)
             return fig
-        fig = px.pie(df, names='class', hole=.3, title=f'Total Success Launches for site {site_dropdown}')
+        fig = px.pie(df, names='class', hole=.3, title=f'Total Success Launches for {site_dropdown}')
+        fig.update_traces(textinfo='percent+label', pull=[0.1, 0])  # Improve readability
     fig.update_layout(height=400, margin=dict(l=20, r=20, t=50, b=20))
     return fig
 
+# Callback for scatter plot
 @app.callback(
-    Output(component_id='success-payload-scatter-chart', component_property='figure'),
-    [Input(component_id='site_dropdown', component_property='value'),
-     Input(component_id="payload_slider", component_property="value")]
+    Output('success-payload-scatter-chart', 'figure'),
+    [Input('site_dropdown', 'value'), Input('payload_slider', 'value')]
 )
 def update_scattergraph(site_dropdown, payload_slider):
     low, high = payload_slider
-    if site_dropdown == 'All Sites':
-        df = spacex_df
-    else:
-        df = spacex_df.loc[spacex_df['Launch Site'] == site_dropdown]
-    mask = (df['Payload Mass (kg)'] > low) & (df['Payload Mass (kg)'] < high)
+    df = spacex_df if site_dropdown == 'All Sites' else spacex_df[spacex_df['Launch Site'] == site_dropdown]
+    mask = (df['Payload Mass (kg)'] > low) & (df['Payload Mass (kg)'] <= high)  # Include upper bound
     filtered_df = df[mask]
     if filtered_df.empty:
         fig = go.Figure()
@@ -111,7 +107,10 @@ def update_scattergraph(site_dropdown, payload_slider):
         filtered_df, x="Payload Mass (kg)", y="class",
         color="Booster Version",
         size='Payload Mass (kg)',
-        hover_data=['Payload Mass (kg)']
+        hover_data=['Payload Mass (kg)'],
+        title="Payload Mass vs Launch Outcome"
     )
     fig.update_layout(height=400, margin=dict(l=20, r=20, t=50, b=20))
+    fig.update_yaxes(tickvals=[0, 1], ticktext=['Failure (0)', 'Success (1)'])  # Clarify y-axis
     return fig
+
