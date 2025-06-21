@@ -14,14 +14,13 @@ This capstone project explores the SpaceX Falcon 9 rocket's first-stage landing 
 - [Predictive Modeling](#predictive-modeling)
 - [Key Insights](#key-insights)
 - [Conclusions](#conclusions)
-- [Project Structure](#project-structure)
 
 ---
 
 ## 📄 Project Summary
 
 - **Goal:** Predict if the Falcon 9 rocket's first stage will successfully land.
-- **Tools Used:** Python, Pandas, Plotly Dash, Folium, SQL, Scikit-learn.
+- **Tools Used:** Python, Pandas, Matplotlib, Numpy, Plotly Dash, Folium, SQL, Scikit-learn.
 - **Techniques:** API & Web Scraping, Data Wrangling, EDA, Interactive Dashboards, Machine Learning.
 
 ---
