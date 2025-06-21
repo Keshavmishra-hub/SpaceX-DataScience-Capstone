@@ -2,7 +2,8 @@
 
 This capstone project explores the SpaceX Falcon 9 rocket's first-stage landing outcomes to determine if we can **predict a successful landing**, using historical launch data. The motivation stems from the cost savings SpaceX achieves through reusable rockets, significantly reducing the $165 million traditional launch cost to ~$62 million.
 
-**Detail Project Report** ([PDF](SpaceX-Falcon9 Analysis.pdf)) 
+**📄 Detailed Project Report** ([PDF](https://github.com/Keshavmishra-hub/SpaceX-DataScience-Capstone/blob/main/SpaceX-Falcon9%20Analysis.pdf))
+
 ---
 
 ## 📌 Table of Contents
